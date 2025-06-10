@@ -1,5 +1,5 @@
 <?php
-$host = "192.168.137.107";
+$host = "192.168.1.210";
 $user = "hospitaldb";
 $password = "Sixvegas12"; // Usa tu contraseña si le pusiste una
 $database = "hospitaldb"; // Asegúrate que este nombre sea correcto
