@@ -5,7 +5,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'GET') {
     if (isset($_GET['id_medico'])) {
         $id_medico = $_GET['id_medico'];
 
-        $sql = "SELECT p.Id, p.nombre, p.apellido, p.fecha_nacimiento, p.genero, p.telefono, p.direccion, h.diagnostico 
+        $sql = "SELECT p.id, p.nombre, p.apellido, p.fecha_nacimiento, p.genero, p.telefono, p.direccion, h.diagnostico 
                 FROM historialmedico h
                 INNER JOIN pacientes p ON h.id_paciente = p.id
                 WHERE h.id_medico = ?";

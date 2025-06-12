@@ -1,6 +1,6 @@
 <?php
 header("Content-Type: application/json");
-include 'conexion.php';
+include 'conexion.php'; // Debe usar mysqli_connect
 
 $id_medico = isset($_GET['id_medico']) ? $_GET['id_medico'] : null;
 $id_paciente = isset($_GET['id_paciente']) ? $_GET['id_paciente'] : null;
@@ -12,48 +12,48 @@ if (!$id_medico || !$id_paciente) {
     exit;
 }
 
-$sql = "SELECT
-            p.nombre,
-            p.apellido,
-            md.nombre AS medicamento,
-            rd.cantidad AS dosis,
-            rd.instrucciones,
-            r.fecha
-        FROM pacientes p
-        INNER JOIN recetas r ON r.id_paciente = p.id
-        INNER JOIN recetadetalle rd ON rd.id_receta = r.id
-        INNER JOIN medicamentos md ON md.id = rd.id_medicamento
-        INNER JOIN medicos m ON m.id = r.id_medico
-        WHERE m.id = ? AND p.id = ?";
+// Llamada al procedimiento
+$stmt = $conn->prepare("CALL sp_reporte_medico_paciente_fecha(?, ?, ?, ?)");
 
-$params = [$id_medico, $id_paciente];
-$types = "ii";
+$mes = $mes !== "" ? $mes : null;
+$anio = $anio !== "" ? $anio : null;
 
-if ($mes !== null && $anio !== null) {
-    $sql .= " AND MONTH(r.fecha) = ? AND YEAR(r.fecha) = ?";
-    $params[] = $mes;
-    $params[] = $anio;
-    $types .= "ii";
+$stmt->bind_param("iiii", $id_medico, $id_paciente, $mes, $anio);
+
+if (!$stmt->execute()) {
+    echo json_encode(["error" => "Error al ejecutar el procedimiento."]);
+    exit;
 }
 
-$sql .= " ORDER BY r.fecha DESC";
+$resultado = [
+    "medicamentos" => [],
+    "historial" => [],
+    "citas" => []
+];
 
-$stmt = $conn->prepare($sql);
-$stmt->bind_param($types, ...$params);
-$stmt->execute();
-$result = $stmt->get_result();
+// Obtener los 3 conjuntos de resultados
+$index = 0;
+do {
+    $res = $stmt->get_result();
+    if ($res) {
+        $rows = [];
+        while ($row = $res->fetch_assoc()) {
+            $rows[] = $row;
+        }
+        if ($index === 0) {
+            $resultado['medicamentos'] = $rows;
+        } elseif ($index === 1) {
+            $resultado['historial'] = $rows;
+        } elseif ($index === 2) {
+            $resultado['citas'] = $rows;
+        }
+        $index++;
+    }
+} while ($stmt->more_results() && $stmt->next_result());
 
-$data = [];
+echo json_encode($resultado, JSON_UNESCAPED_UNICODE);
 
-while ($row = $result->fetch_assoc()) {
-    $data[] = $row;
-}
-
-if (empty($data)) {
-    echo json_encode(["message" => "No se encontraron recetas en estas fechas."]);
-} else {
-    echo json_encode($data, JSON_UNESCAPED_UNICODE);
-}
-
+// Cierre
 $stmt->close();
 $conn->close();
+?>
